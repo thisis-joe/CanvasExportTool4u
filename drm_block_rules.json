@@ -1,0 +1,92 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*markany*",
+      "resourceTypes": ["xmlhttprequest", "websocket", "other", "script", "image", "media", "object", "ping"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*webdrm*",
+      "resourceTypes": ["xmlhttprequest", "websocket", "other", "script"]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*madrm*",
+      "resourceTypes": ["xmlhttprequest", "websocket", "other", "script"]
+    }
+  },
+  {
+    "id": 4,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*maws*",
+      "resourceTypes": ["xmlhttprequest", "websocket", "other"]
+    }
+  },
+  {
+    "id": 5,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*drm-agent*",
+      "resourceTypes": ["xmlhttprequest", "websocket", "other"]
+    }
+  },
+  {
+    "id": 6,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*drmgateway*",
+      "resourceTypes": ["xmlhttprequest", "websocket", "other"]
+    }
+  },
+  {
+    "id": 7,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||localhost:7777/*",
+      "resourceTypes": ["xmlhttprequest", "websocket", "other", "script"]
+    }
+  },
+  {
+    "id": 8,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||localhost:8443/*",
+      "resourceTypes": ["xmlhttprequest", "websocket", "other", "script"]
+    }
+  },
+  {
+    "id": 9,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||127.0.0.1:7777/*",
+      "resourceTypes": ["xmlhttprequest", "websocket", "other", "script"]
+    }
+  },
+  {
+    "id": 10,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "||127.0.0.1:8443/*",
+      "resourceTypes": ["xmlhttprequest", "websocket", "other", "script"]
+    }
+  }
+]

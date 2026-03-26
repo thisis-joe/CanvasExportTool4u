@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CanvasExportTool4u Unified Toolkit</title>
+  <link rel="stylesheet" href="merged_popup.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <h1>CanvasExportTool4u Unified Toolkit</h1>
+      <p class="desc">DRM Debugger 스타일로 통일된 팝업에서 두 기능을 함께 제어합니다.</p>
+    </header>
+
+    <div class="tabs" role="tablist" aria-label="기능 선택">
+      <button id="tabSaver" class="tab active" data-target="panelSaver" role="tab" aria-selected="true">Canvas Saver</button>
+      <button id="tabDrm" class="tab" data-target="panelDrm" role="tab" aria-selected="false">DRM Debugger</button>
+    </div>
+
+    <section id="panelSaver" class="panel active" role="tabpanel">
+      <div class="panel-shell saver-shell">
+        <div class="section-label">Canvas Saver 설정</div>
+
+        <div class="saver-grid">
+          <div class="section field">
+            <label>Page selector</label>
+            <input id="selectorPage" type="text" placeholder=".page" />
+            <p class="help">페이지 블록을 찾는 CSS 선택자입니다. 보통 PDF.js 뷰어는 <code>.page</code>를 사용합니다.</p>
+          </div>
+
+          <div class="section field">
+            <label>Canvas selector</label>
+            <input id="selectorCanvas" type="text" placeholder="canvas" />
+            <p class="help">각 페이지 내부에서 이미지로 저장할 실제 캔버스를 찾는 선택자입니다.</p>
+          </div>
+
+          <div class="section field">
+            <label>Page number attribute</label>
+            <input id="pageNumberAttr" type="text" placeholder="data-page-number" />
+            <p class="help">페이지 번호를 읽을 HTML 속성명입니다. 파일명 번호 계산에 사용됩니다.</p>
+          </div>
+
+          <div class="section field">
+            <label>Filename prefix</label>
+            <input id="filenamePrefix" type="text" placeholder="page" />
+            <p class="help">저장 파일명 앞부분입니다. 예: <code>page-0001.png</code></p>
+          </div>
+
+          <div class="section field">
+            <label>Render wait (ms)</label>
+            <input id="renderWaitMs" type="number" min="100" step="100" />
+            <p class="help">화면에 그려진 뒤 캡처까지 기다릴 시간(ms)입니다.</p>
+          </div>
+
+          <div class="section field">
+            <label>Min blob size</label>
+            <input id="minBlobSize" type="number" min="0" step="100" />
+            <p class="help">이 값보다 작은 결과 이미지는 비정상으로 보고 저장을 건너뜁니다.</p>
+          </div>
+
+          <div class="section field checkbox-field">
+            <label class="checkbox-label">
+              <input id="autoScroll" type="checkbox" />
+              Auto scroll
+            </label>
+            <p class="help">자동으로 아래로 내려가며 보이는 페이지를 순차 저장합니다.</p>
+          </div>
+
+          <div class="section field">
+            <label>Scroll step (px)</label>
+            <input id="scrollStepPx" type="number" min="100" step="100" />
+            <p class="help">자동 스크롤 한 번에 이동할 픽셀 양입니다.</p>
+          </div>
+
+          <div class="section field full">
+            <label>Scroll interval (ms)</label>
+            <input id="scrollIntervalMs" type="number" min="300" step="100" />
+            <p class="help">자동 스크롤 간격(ms)입니다. 네트워크/렌더 속도에 맞춰 조정하세요.</p>
+          </div>
+
+          <div class="buttons full">
+            <button id="saveSettings" class="secondary">설정 저장</button>
+            <button id="startBtn" class="primary">시작</button>
+            <button id="stopBtn" class="danger">중지</button>
+            <button id="refreshBtn">상태 새로고침</button>
+          </div>
+
+          <div class="statusBox full">
+            <div><strong>현재 탭:</strong> <span id="currentTab">확인 중...</span></div>
+            <div><strong>상태:</strong> <span id="runningStatus">-</span></div>
+            <div><strong>저장 수:</strong> <span id="savedCount">0</span></div>
+            <div><strong>저장 페이지:</strong> <span id="savedPages">-</span></div>
+            <div><strong>오류:</strong> <span id="lastError">-</span></div>
+          </div>
+
+          <div id="saverMessage" class="message full"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panelDrm" class="panel" role="tabpanel">
+      <div class="toggle-section">
+        <div class="toggle-label">
+          <div class="toggle-name">DRM 테스트 모드</div>
+          <div class="toggle-desc" id="toggleDesc">비활성화 — 일반 DRM 환경</div>
+        </div>
+        <span class="status-pill off" id="statusPill">OFF</span>
+        <label class="toggle-wrap">
+          <input type="checkbox" id="masterToggle">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="mode-section">
+        <div class="section-label">인터셉트 모드</div>
+        <div class="mode-grid">
+          <button class="mode-btn active" data-mode="monitor">
+            <span class="mode-name">모니터링</span>
+          </button>
+          <button class="mode-btn" data-mode="block">
+            <span class="mode-name">차단</span>
+          </button>
+          <button class="mode-btn" data-mode="mock">
+            <span class="mode-name">모킹</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-item">
+          <div class="stat-num" id="statTotal">0</div>
+          <div class="stat-label">전체</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num intercepted" id="statIntercepted">0</div>
+          <div class="stat-label">감지</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num blocked" id="statBlocked">0</div>
+          <div class="stat-label">차단</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num passed" id="statPassed">0</div>
+          <div class="stat-label">통과</div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="action-btn" id="btnPing">에이전트 점검</button>
+        <button class="action-btn" id="btnExport">로그 내보내기</button>
+        <button class="action-btn danger" id="btnClear">초기화</button>
+      </div>
+
+      <div class="agent-section" id="agentSection">
+        <div class="section-label">DRM 에이전트 상태</div>
+        <div class="agent-grid" id="agentGrid"></div>
+      </div>
+
+      <div class="log-section">
+        <div class="log-header">
+          <span class="log-title">네트워크 로그</span>
+          <span class="log-count" id="logCount">0</span>
+        </div>
+        <div class="log-list" id="logList">
+          <div class="log-empty">DRM 테스트 모드를 활성화하면 네트워크 요청이 기록됩니다.</div>
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="footer-info" id="footerInfo">MarkAny WebDRM · CanvasExportTool4u.com</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="merged_popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>CanvasExportTool4u DRM Debugger</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Pretendard:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0D1117;
+    --surface: #161B22;
+    --surface2: #1C2128;
+    --border: #30363D;
+    --accent: #00D4AA;
+    --accent-dim: rgba(0,212,170,0.1);
+    --red: #FF4757;
+    --red-dim: rgba(255,71,87,0.1);
+    --yellow: #FFD700;
+    --yellow-dim: rgba(255,215,0,0.08);
+    --blue: #58A6FF;
+    --purple: #AA58FF;
+    --text: #E6EDF3;
+    --muted: #7D8590;
+    --dim: #484F58;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Pretendard', system-ui, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 12px;
+    overflow: hidden;
+  }
+
+  /* ── Layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: 48px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    position: relative;
+  }
+  .toolbar::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent) 0%, transparent 60%);
+    opacity: 0.5;
+  }
+  .toolbar-logo {
+    font-size: 13px; font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.3px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .toolbar-logo svg { width: 16px; height: 16px; }
+  .toolbar-sep { width: 1px; height: 20px; background: var(--border); }
+
+  .tb-toggle {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tb-toggle-label { font-size: 11px; color: var(--muted); }
+  .mini-toggle { position: relative; width: 40px; height: 22px; }
+  .mini-toggle input { opacity: 0; width: 0; height: 0; }
+  .mini-slider {
+    position: absolute; inset: 0;
+    background: var(--border);
+    border-radius: 22px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid var(--dim);
+  }
+  .mini-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    left: 2px; top: 2px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), background 0.2s;
+  }
+  .mini-toggle input:checked + .mini-slider { background: var(--accent); border-color: var(--accent); }
+  .mini-toggle input:checked + .mini-slider::before { transform: translateX(18px); background: #fff; }
+
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--dim);
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .status-dot.on { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  .mode-tabs {
+    display: flex; gap: 2px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px;
+  }
+  .mode-tab {
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px; font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--sans);
+  }
+  .mode-tab:hover { color: var(--text); }
+  .mode-tab.active { background: var(--accent-dim); color: var(--accent); }
+  .mode-tab.active.block { background: var(--red-dim); color: var(--red); }
+  .mode-tab.active.mock { background: rgba(170,88,255,0.1); color: var(--purple); }
+
+  .tb-actions { margin-left: auto; display: flex; gap: 6px; }
+  .tb-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 4px 10px;
+    color: var(--muted);
+    font-size: 11px; cursor: pointer;
+    transition: all 0.15s;
+    font-family: var(--sans);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .tb-btn:hover { color: var(--text); border-color: var(--muted); }
+  .tb-btn.danger:hover { color: var(--red); border-color: var(--red); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .stats-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1px; background: var(--border);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .stat-box {
+    background: var(--surface);
+    padding: 10px 12px;
+  }
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 22px; font-weight: 700;
+    line-height: 1;
+    color: var(--text);
+  }
+  .stat-val.c-intercept { color: var(--yellow); }
+  .stat-val.c-block { color: var(--red); }
+  .stat-val.c-pass { color: var(--accent); }
+  .stat-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .sidebar-section { padding: 10px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .sidebar-title { font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+
+  /* Agent rows */
+  .agent-list { display: flex; flex-direction: column; gap: 4px; }
+  .agent-row {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 5px; padding: 6px 8px;
+  }
+  .a-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .a-dot.ok { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+  .a-dot.fail { background: var(--red); }
+  .a-dot.wait { background: var(--yellow); animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .a-port { font-family: var(--mono); font-size: 11px; }
+  .a-status { font-size: 10px; color: var(--muted); margin-left: auto; }
+
+  .ping-btn {
+    width: 100%; margin-top: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 5px; padding: 5px;
+    color: var(--muted); font-size: 11px;
+    cursor: pointer; transition: all 0.15s;
+    font-family: var(--sans);
+  }
+  .ping-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* Rule status */
+  .rule-info {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .rule-active { color: var(--accent); }
+  .rule-inactive { color: var(--dim); }
+
+  /* ── Log Panel ── */
+  .log-panel {
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  .log-toolbar {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+  .log-toolbar-title { font-size: 11px; font-weight: 600; color: var(--muted); }
+  .filter-btns { display: flex; gap: 3px; margin-left: 8px; }
+  .filter-btn {
+    padding: 2px 7px; border-radius: 3px;
+    border: 1px solid transparent;
+    background: transparent;
+    font-size: 10px; color: var(--muted);
+    cursor: pointer; transition: all 0.15s;
+    font-family: var(--sans);
+  }
+  .filter-btn:hover { border-color: var(--border); color: var(--text); }
+  .filter-btn.on { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .filter-btn.block { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+  .filter-btn.intercept { border-color: var(--yellow); color: var(--yellow); background: var(--yellow-dim); }
+  .filter-btn.mock { border-color: var(--purple); color: var(--purple); background: rgba(170,88,255,0.08); }
+  .filter-btn.error { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+
+  .search-input {
+    margin-left: auto;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 8px;
+    color: var(--text);
+    font-size: 11px;
+    font-family: var(--mono);
+    width: 180px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--dim); }
+
+  .log-count-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 1px 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+  }
+
+  .log-table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .log-table-wrap::-webkit-scrollbar { width: 5px; }
+  .log-table-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  thead {
+    position: sticky; top: 0;
+    background: var(--surface2);
+    z-index: 1;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    padding: 5px 10px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border-right: 1px solid var(--border);
+  }
+  th:last-child { border-right: none; }
+  tbody tr {
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    transition: background 0.1s;
+    cursor: pointer;
+  }
+  tbody tr:hover { background: var(--surface2); }
+  td {
+    padding: 5px 10px;
+    vertical-align: middle;
+    border-right: 1px solid rgba(48,54,61,0.3);
+  }
+  td:last-child { border-right: none; }
+
+  .badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .badge-intercept { background: var(--yellow-dim); color: var(--yellow); }
+  .badge-block     { background: var(--red-dim);    color: var(--red); }
+  .badge-pass      { background: var(--accent-dim); color: var(--accent); }
+  .badge-info      { background: rgba(88,166,255,0.1); color: var(--blue); }
+  .badge-error     { background: var(--red-dim);    color: var(--red); }
+  .badge-mock      { background: rgba(170,88,255,0.1); color: var(--purple); }
+
+  .td-time { color: var(--dim); white-space: nowrap; font-size: 10px; }
+  .td-msg  { color: var(--text); }
+  .td-url  { color: var(--muted); font-size: 10px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .row-detail {
+    background: var(--surface2);
+    padding: 6px 10px 6px 36px;
+    font-size: 10px;
+    color: var(--muted);
+    word-break: break-all;
+    border-bottom: 1px solid var(--border);
+    display: none;
+  }
+  .row-detail.open { display: table-row; }
+
+  .empty-state {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .empty-state .icon { font-size: 32px; margin-bottom: 10px; }
+  .empty-state .hint { font-size: 11px; margin-top: 6px; color: var(--dim); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-logo">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L3 7V12C3 16.55 6.84 20.74 12 22C17.16 20.74 21 16.55 21 12V7L12 2Z" stroke="#00D4AA" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M9 12L11 14L15 10" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      CanvasExportTool4u DRM Debugger
+    </div>
+
+    <div class="toolbar-sep"></div>
+
+    <div class="tb-toggle">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="tb-toggle-label" id="toggleLabel">비활성화</span>
+      <label class="mini-toggle">
+        <input type="checkbox" id="masterToggle">
+        <span class="mini-slider"></span>
+      </label>
+    </div>
+
+    <div class="toolbar-sep"></div>
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="monitor">👁 모니터링</button>
+      <button class="mode-tab block" data-mode="block">🚫 차단</button>
+      <button class="mode-tab mock" data-mode="mock">🎭 모킹</button>
+    </div>
+
+    <div class="tb-actions">
+      <button class="tb-btn" id="btnExport">↓ 내보내기</button>
+      <button class="tb-btn danger" id="btnClear">🗑 초기화</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-val" id="sTotal">0</div>
+        <div class="stat-lbl">전체</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val c-intercept" id="sIntercepted">0</div>
+        <div class="stat-lbl">감지</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val c-block" id="sBlocked">0</div>
+        <div class="stat-lbl">차단</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val c-pass" id="sPassed">0</div>
+        <div class="stat-lbl">통과</div>
+      </div>
+    </div>
+
+    <!-- Agent status -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">DRM 에이전트</div>
+      <div class="agent-list" id="agentList">
+        <div class="agent-row"><span class="a-dot wait"></span><span class="a-port">:7777</span><span class="a-status">대기</span></div>
+        <div class="agent-row"><span class="a-dot wait"></span><span class="a-port">:8443</span><span class="a-status">대기</span></div>
+        <div class="agent-row"><span class="a-dot wait"></span><span class="a-port">:9443</span><span class="a-status">대기</span></div>
+        <div class="agent-row"><span class="a-dot wait"></span><span class="a-port">:7443</span><span class="a-status">대기</span></div>
+      </div>
+      <button class="ping-btn" id="btnPing">🔍 포트 스캔</button>
+    </div>
+
+    <!-- Block rules -->
+    <div class="sidebar-section">
+      <div class="sidebar-title">차단 규칙 상태</div>
+      <div class="rule-info" id="ruleInfo">
+        <span class="rule-inactive">● 비활성화됨</span><br>
+        차단 모드 ON 시 활성화
+      </div>
+    </div>
+  </div>
+
+  <!-- Log Panel -->
+  <div class="log-panel">
+    <div class="log-toolbar">
+      <span class="log-toolbar-title">네트워크 로그</span>
+      <div class="filter-btns">
+        <button class="filter-btn" data-filter="all" style="border-color:var(--border);color:var(--text)">전체</button>
+        <button class="filter-btn intercept" data-filter="intercept">감지</button>
+        <button class="filter-btn block" data-filter="block">차단</button>
+        <button class="filter-btn on" data-filter="pass">통과</button>
+        <button class="filter-btn error" data-filter="error">오류</button>
+        <button class="filter-btn mock" data-filter="mock">모킹</button>
+      </div>
+      <span class="log-count-badge" id="logCount">0</span>
+      <input type="text" class="search-input" id="searchInput" placeholder="URL / 메시지 검색...">
+    </div>
+
+    <div class="log-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:80px">유형</th>
+            <th style="width:90px">시각</th>
+            <th>메시지</th>
+            <th>URL</th>
+          </tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState">
+        <div class="icon">🔍</div>
+        <div>DRM 테스트 모드를 활성화하면 네트워크 로그가 여기에 표시됩니다</div>
+        <div class="hint">MarkAny WebDRM 관련 XHR · Fetch · WebSocket 요청을 자동으로 감지합니다</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="drm_panel.js"></script>
+</body>
+</html>
